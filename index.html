@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tặng Em Con Chim Thật To</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    textarea, input, button {
+      font-size: 16px;
+      width: 90%;
+      max-width: 340px;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #copyButton { background: #a728a7; }
+    #deleteListButton { background: #0f4d0a; }
+    #clearLogsButton { background: #ffc107; color: black; }
+  </style>
+</head>
+
+<body>
+<div id="customToast"></div>
+
+<h3>📨 Tặng Em Con Chim Thật To</h3>
+
+<textarea id="emailListInput" placeholder="Dán email"></textarea>
+<button id="addListButton">➕ Thêm Email</button>
+<button id="deleteListButton">🗑️ Xóa Danh Sách Email</button>
+
+<input type="text" id="emailOutput" readonly>
+<button id="manualCopyButton">📋 Copy</button>
+
+<p id="count">email còn lại: 0</p>
+<button id="clearLogsButton">🧹 Clear Log</button>
+<button id="copyButton">📋 Lấy & Copy Email</button>
+
+<script>
+/* ============ FIREBASE ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDUu0LHI1EAjfa3DNqICkXSLeqc0MMaaPw",
+  authDomain: "emailxll11111.firebaseapp.com",
+  databaseURL: "https://emailxl11111-default-rtdb.asia-southeast1.firebasedatabase.app"
+  projectId: "emailxll11111",
+  storageBucket: "emailxll11111.firebasestorage.app",
+  messagingSenderId: "275159613135",
+  appId: "1:275159613135:web:7e920ad98d186b239bc1ba",
+  measurementId: "G-8HK1QTLZF5"
+};
+
+const db = firebase.database();
+const emailRef = db.ref("emails");
+const copyLogsRef = db.ref("copyLogs");
+
+let emailList = [];
+
+/* ============ UTILS ============ */
+function extractEmails(text) {
+  const regex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+  return [...new Set(text.match(regex) || [])];
+}
+
+function updateCount() {
+  document.getElementById("count").textContent =
+    `📊 Số email còn lại: ${emailList.length}`;
+}
+
+/* ============ FIREBASE LISTENER (FIX) ============ */
+emailRef.on("value", snap => {
+  const data = snap.val();
+  emailList = data ? Object.values(data) : [];
+  updateCount();
+});
+
+/* ============ ADD EMAIL (FIX) ============ */
+addListButton.onclick = () => {
+  const emails = extractEmails(emailListInput.value);
+  if (!emails.length) return alert("Không có email hợp lệ");
+
+  emails.forEach(e => emailRef.push(e));
+  emailListInput.value = "";
+};
+
+/* ============ DELETE LIST (FIX) ============ */
+deleteListButton.onclick = () => {
+  if (!confirm("Xóa toàn bộ email?")) return;
+  emailRef.remove();
+};
+
+/* ============ COPY ============ */
+function copyText(text) {
+  navigator.clipboard.writeText(text);
+}
+
+manualCopyButton.onclick = () => {
+  if (emailOutput.value) copyText(emailOutput.value);
+};
+
+/* ============ AUTO COPY (FIX) ============ */
+copyButton.onclick = () => {
+  if (!emailList.length) return alert("Hết email");
+
+  const index = Math.floor(Math.random() * emailList.length);
+  const email = emailList[index];
+  emailOutput.value = email;
+  copyText(email);
+
+  emailRef.orderByValue().equalTo(email).limitToFirst(1).once("value", s => {
+    s.forEach(c => c.ref.remove());
+  });
+};
+
+/* ============ CLEAR LOG ============ */
+clearLogsButton.onclick = () => {
+  copyLogsRef.remove();
+};
+</script>
+</body>
+</html>
